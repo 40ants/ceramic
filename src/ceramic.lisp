@@ -2,7 +2,8 @@
 (defpackage ceramic
   (:use :cl)
   (:import-from :ceramic.driver
-                :*driver*)
+                :*driver*
+                :driver-running)
   (:import-from :ceramic.setup
                 :setup)
   (:import-from :ceramic.runtime
@@ -95,6 +96,11 @@
 
 (defun start ()
   "Start the Electron process."
+
+  (unless *driver*
+    (setf *driver*
+          (make-instance 'ceramic.driver:driver)))
+  
   (ceramic.driver:start *driver*))
 
 (defun stop ()
@@ -110,12 +116,45 @@
   "Define the application's entry point."
   (let ((entry-point (intern (symbol-name system-name)
                              (find-package :ceramic-entry))))
-    `(defun ,entry-point ()
-       ;; Start the executable-relative Electron process
-       (let ((*releasep* t))
+    `(defun ,entry-point (&key releasep)
+       "Starts Ceramic application.
+
+Set 'releasep' argument to nil if you start it from the REPL.
+Otherwise, Ceramic will search Electron binary in the same
+directory where executable file resides."
+       
+       (let ((*releasep* releasep)
+             (swank-port (find-port:find-port :min 4005))
+             (swank-started nil)
+             (swank-package (find-package :swank)))
+         
+         (when swank-package
+           ;; We'll start swank only of application was started not
+           ;; from the slime's repl.
+           (unless (ignore-errors
+                    (funcall (intern "CONNECTION-INFO" swank-package)))
+             
+             (log:info "Starting swank server on port"
+                       swank-port)
+             
+             (funcall (intern "CREATE-SERVER" swank-package)
+                      :dont-close t
+                      :port swank-port)
+             (setf swank-started t)))
+
+         ;; Start Ceramic and Electron
          (start)
          (handler-case
              (progn
                ,@body
-               (loop (sleep 1)))
-           (t () (quit)))))))
+               (loop while (driver-running *driver*)
+                     do (sleep 1)))
+           
+           (t (condition)
+             (log:info "Exception caught" condition)
+             (when swank-started
+               (funcall (intern "STOP-SERVER" swank-package)
+                        swank-port))
+             ;; (uiop:print-condition-backtrace condition)
+             (log:info "Quitting")
+             (quit)))))))

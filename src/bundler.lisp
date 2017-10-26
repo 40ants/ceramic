@@ -72,7 +72,7 @@ most people can unzip)."
            ;; Compile the app
            (log-message "Compiling app...")
            (trivial-build:build system-name
-                                (format nil "(ceramic-entry::~A)"
+                                (format nil "(ceramic-entry::~A :releasep t)"
                                         (string-downcase
                                          (symbol-name system-name)))
                                 executable-pathname)

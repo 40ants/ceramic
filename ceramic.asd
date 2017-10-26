@@ -18,6 +18,7 @@
                :uuid
                :copy-directory
                :clack-handler-hunchentoot
+               :pathname-utils
                :remote-js)
   :components ((:module "src"
                 :serial t

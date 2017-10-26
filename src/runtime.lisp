@@ -20,4 +20,12 @@
 
 (defun executable-relative-pathname (pathname)
   "Return an absolute pathname relative to the executable pathname."
-  (merge-pathnames pathname (executable-pathname)))
+  (let ((executable-path (pathname-utils:to-directory
+                          (executable-pathname))))
+    (log:info "Calculating executable relative pathname"
+              pathname
+              executable-path)
+    (let ((result (merge-pathnames pathname
+                                   executable-path)))
+      (log:info "Result is" result)
+      result)))
