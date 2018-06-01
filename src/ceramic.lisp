@@ -1,4 +1,3 @@
-(in-package :cl-user)
 (defpackage ceramic
   (:use :cl)
   (:import-from :ceramic.driver
@@ -44,6 +43,8 @@
                 :unselect
                 :open-dev-tools
                 :close-dev-tools)
+  (:import-from #:alexandria
+                #:ensure-symbol)
   (:shadowing-import-from :ceramic.window
                           :close)
   (:export :window
@@ -114,8 +115,8 @@
 
 (defmacro define-entry-point (system-name () &body body)
   "Define the application's entry point."
-  (let ((entry-point (intern (symbol-name system-name)
-                             (find-package :ceramic-entry))))
+  (let ((entry-point (ensure-symbol system-name
+                                    :ceramic-entry)))
     `(defun ,entry-point (&key releasep)
        "Starts Ceramic application.
 

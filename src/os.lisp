@@ -1,4 +1,3 @@
-(in-package :cl-user)
 (defpackage ceramic.os
   (:use :cl)
   (:import-from :ceramic.error
@@ -30,3 +29,8 @@
 
 (defvar *architecture* (detect-architecture)
   "The OS architecture. Either @c(:64) or @c(:32).")
+
+
+(defun copy-directory (from to)
+  (log:info "Copying directory" from to)
+  (copy-directory:copy from to))

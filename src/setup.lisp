@@ -1,4 +1,3 @@
-(in-package :cl-user)
 (defpackage ceramic.setup
   (:use :cl)
   (:import-from :ceramic.log
@@ -13,6 +12,8 @@
                 :app-directory
                 :binary-pathname
                 :get-release)
+  (:import-from #:ceramic.os
+                #:copy-directory)
   (:export :setup)
   (:documentation "Set up everything needed to develop with Ceramic."))
 (in-package :ceramic.setup)
@@ -26,7 +27,7 @@
 (defparameter +ws-module+
   (asdf:system-relative-pathname :ceramic #p"node_modules/ws/"))
 
-(defun clean-release (directory &key operating-system)
+(defun clean-release (app-directory)
   "Clean up default files from an Electron release."
   (let ((app-files (list #p"main.js"
                          #p"default_app.js"
@@ -34,22 +35,20 @@
                          #p"package.json")))
     (loop for file in app-files do
       (let ((pathname (merge-pathnames file
-                                       (app-directory directory :operating-system operating-system))))
+                                       app-directory)))
         (when (probe-file pathname)
           (delete-file pathname))))))
 
-(defun insert-javascript (directory &key operating-system)
+(defun insert-javascript (app-directory)
   "Insert the main process JavaScript into an Electron release."
   (uiop:copy-file +main-javascript+
                   (merge-pathnames #p"main.js"
-                                   (app-directory directory
-                                                  :operating-system operating-system))))
+                                   app-directory)))
 
-(defun insert-package-definition (directory &key operating-system)
+(defun insert-package-definition (app-directory)
   "Insert the package.json into an Electron release."
   (with-open-file (output-stream (merge-pathnames #p"package.json"
-                                                  (app-directory directory
-                                                                 :operating-system operating-system))
+                                                  app-directory)
                                  :direction :output
                                  :if-does-not-exist :create)
     (write-string (format nil "{ \"name\": ~S, \"version\": ~S, \"main\": \"main.js\" }"
@@ -58,20 +57,32 @@
                            (asdf:find-system :ceramic)))
                   output-stream)))
 
-(defun copy-ws-module (directory &key operating-system)
+(defun copy-ws-module (app-directory)
   "Copy the WebSockets module."
-  (copy-directory:copy +ws-module+
-                       (merge-pathnames #p"node_modules/ws/"
-                                        (app-directory directory
-                                                       :operating-system operating-system))))
+  (copy-directory +ws-module+
+                  (merge-pathnames #p"node_modules/ws/"
+                                   app-directory)))
 
-(defun prepare-release (directory &key operating-system)
-  "Prepare an Electron release."
-  (ensure-directories-exist (app-directory directory :operating-system operating-system))
-  (clean-release directory :operating-system operating-system)
-  (insert-javascript directory :operating-system operating-system)
-  (insert-package-definition directory :operating-system operating-system)
-  (copy-ws-module directory :operating-system operating-system))
+(defun prepare-release (&key release-directory
+                          operating-system
+                          app-directory)
+  "Prepare an Electron release.
+   app-directory is a final directory where Node.js part should be copied."
+  (unless (or app-directory
+              release-directory)
+    (error "One of :app-directory or :release-directory should be specified"))
+  
+  (unless app-directory
+    (setf app-directory
+          (app-directory release-directory
+                         :operating-system operating-system)))
+  
+  (ensure-directories-exist app-directory)
+  (clean-release app-directory)
+  (insert-javascript app-directory)
+  (insert-package-definition app-directory)
+  (copy-ws-module app-directory)
+  (values))
 
 ;;; Main
 
@@ -93,5 +104,6 @@
                      :version *electron-version*))
       (log-message "Already downloaded. Use :force t to force download."))
   (log-message "Preparing the files...")
-  (prepare-release (release-directory) :operating-system *operating-system*)
+  (prepare-release :release-directory (release-directory)
+                   :operating-system *operating-system*)
   (values))

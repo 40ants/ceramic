@@ -188,30 +188,43 @@
   (log:info "Trying to log with log4cl" *releasep*)
   
   (let* ((directory (if *releasep*
-                        (executable-relative-pathname #p"electron/")
+                        (executable-relative-pathname #p"./")
                         (release-directory)))
-         (args (list (app-directory directory
-                                    :operating-system ceramic.os:*operating-system*)
-                     (address driver)
-                     (write-to-string (port driver))))
-         (path (binary-pathname directory
-                                :operating-system ceramic.os:*operating-system*))
          (app-directory
            (app-directory directory
-                          :operating-system ceramic.os:*operating-system*)))
+                          :operating-system ceramic.os:*operating-system*))
+         (path (binary-pathname directory
+                                :operating-system ceramic.os:*operating-system*))
+         (args (list app-directory
+                     (address driver)
+                     (write-to-string (port driver)))))
     
     (with-slots (process) driver
 
       (log:info "Starting Electron"
-                path args
+                path
+                args
                 directory
-                app-directory)
+                app-directory
+                *logging*
+                *releasep*)
 
       (setf process
             (external-program:start path
                                     args
-                                    :output (when *logging* *standard-output*)
-                                    :error :output))))
+                                    :output (when *logging*
+                                              *standard-output*)
+                                    :error :output))
+      (multiple-value-bind (status code)
+          (external-program:process-status process)
+        (sleep 5)
+        (log:info "Program was started" status code)
+        (when (and (not (eql status
+                             :running))
+                   (not (zerop code)))
+          (error "Program ~A exited with ~A code."
+                 path
+                 code)))))
   (values))
 
 (defmethod stop-electron ((driver driver))
