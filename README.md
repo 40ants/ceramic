@@ -1,10 +1,27 @@
 # [Ceramic](http://ceramic.github.io/)
 
-[![Build Status](https://travis-ci.org/ceramic/ceramic.svg?branch=master)](https://travis-ci.org/ceramic/ceramic)
-[![Coverage Status](https://coveralls.io/repos/ceramic/ceramic/badge.svg?branch=master&service=github)](https://coveralls.io/github/ceramic/ceramic?branch=master)
-[![Quicklisp](http://quickdocs.org/badge/ceramic.svg)](http://quickdocs.org/ceramic/)
-
 Common Lisp web apps on the desktop.
+
+## How this branch is different
+
+This repository is a fork of the original https://github.com/ceramic/ceramic. It was made to
+find an ability to build end-user application on OS instead of tar archive.
+
+### Goals
+
+Right now I'm going to use [electron-packager](https://github.com/electron-userland/electron-packager) for downloading
+Electron and packaging application.
+
+Secondary goal is to upgrade Electron's version from 1.2.7 to 2.x.
+
+### Changes
+
+* Now Ceramic uses log4cl and produces more logging in place where application
+  is commbunicating with JS part.
+* Part of bundler functionality was modified to use with ceramic.ros script from command line.
+
+  Previos way to make application is broken now.
+
 
 ## Overview
 
